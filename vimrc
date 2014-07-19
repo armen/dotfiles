@@ -68,8 +68,8 @@ endif
 
 " This loads all the plugins specified in ~/.vim/vundle.vim
 " Use Vundle plugin to manage all other plugins
-if filereadable(expand("~/.vim/vundles.vim"))
-	source ~/.vim/vundles.vim
+if filereadable(expand("~/.vim/plugins.vim"))
+	source ~/.vim/plugins.vim
 endif
 
 if filereadable(expand("~/.vim/settings.vim"))
