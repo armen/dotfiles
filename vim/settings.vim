@@ -34,7 +34,7 @@ autocmd FileType go,php set completeopt=longest,menuone
 " Use goimports by default and format go files on save
 " To install goimports: go get code.google.com/p/go.tools/cmd/goimports
 let g:gofmt_command = "goimports"
-autocmd FileType go autocmd BufWritePre <buffer> Fmt
+autocmd FileType go autocmd BufWritePre <buffer> silent! undojoin | silent Fmt " undojoin does the trick to preserve the undo
 
 " PDV settings
 let g:pdv_template_dir = $HOME ."/.vim/bundle/pdv/templates_snip"
