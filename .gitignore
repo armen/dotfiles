@@ -1,5 +1,6 @@
 vim/backups/*
 vim/bundle/*
+vim/.netrwhist
 !vim/bundle/.keepme
 *.swp
 *.swp
