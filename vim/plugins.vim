@@ -13,7 +13,7 @@ Plugin 'altercation/vim-colors-solarized'
 
 " Golang completion and syntax
 Plugin 'undx/vim-gocode'
-Plugin 'fatih/vim-go'
+Plugin 'vim-jp/go-vim'
 
 " Tool for generating PHP doc blocks
 Plugin 'tobyS/pdv'
