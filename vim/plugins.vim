@@ -12,8 +12,7 @@ Plugin 'bogado/file-line'
 Plugin 'altercation/vim-colors-solarized'
 
 " Golang completion and syntax
-Plugin 'undx/vim-gocode'
-Plugin 'vim-jp/go-vim'
+Plugin 'fatih/vim-go'
 
 " Tool for generating PHP doc blocks
 Plugin 'tobyS/pdv'

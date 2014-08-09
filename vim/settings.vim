@@ -31,10 +31,8 @@ let g:SuperTabContextDefaultCompletionType = "<c-x><c-o>"
 " complete options (disable preview scratch window for go)
 autocmd FileType go,php set completeopt=longest,menuone
 
-" Use goimports by default and format go files on save
-" To install goimports: go get code.google.com/p/go.tools/cmd/goimports
-let g:gofmt_command = "goimports"
-autocmd FileType go autocmd BufWritePre <buffer> silent! undojoin | silent Fmt " undojoin does the trick to preserve the undo
+" If you want golang integration comment out following line
+let g:go_disable_autoinstall = 1
 
 " PDV settings
 let g:pdv_template_dir = $HOME ."/.vim/bundle/pdv/templates_snip"
