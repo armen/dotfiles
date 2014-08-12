@@ -7,7 +7,7 @@ Dotfiles
 
 This is insecure, make sure you read the bash script first.
 
-	curl https://raw.githubusercontent.com/armen/dotfiles/master/install.bash | bash
+	curl --silent https://raw.githubusercontent.com/armen/dotfiles/master/install.bash | bash
 
 ### golang integration
 
