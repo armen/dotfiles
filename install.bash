@@ -21,7 +21,13 @@ else
 
     cd $HOME/.dotfiles
     git pull
-    vim +PluginClean +PluginUpdate +qall
+
+
+    if [ ! -d "$HOME/.dotfiles/vim/bundle/Vundle.vim" ]; then
+        git clone https://github.com/gmarik/vundle "$HOME/.dotfiles/vim/bundle/Vundle.vim"
+    fi
+
+    vim +PluginClean +PluginInstall +PluginUpdate +qall
     cd -
 
     exit 1
