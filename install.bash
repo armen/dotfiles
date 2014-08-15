@@ -29,6 +29,4 @@ else
 
     vim +PluginClean +PluginInstall +PluginUpdate +qall
     cd -
-
-    exit 1
 fi
