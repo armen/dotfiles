@@ -30,3 +30,6 @@ else
     vim +PluginClean +PluginInstall +PluginUpdate +qall
     cd -
 fi
+
+curl -s "https://raw.githubusercontent.com/seebi/dircolors-solarized/master/dircolors.ansi-dark" -o ~/.dircolors.ansi-dark
+curl -s "https://raw.githubusercontent.com/brantb/solarized/master/xresources/solarized" -o ~/.Xresources
