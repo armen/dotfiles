@@ -4,14 +4,14 @@ set t_Sb=^[[4%dm
 set t_Sf=^[[3%dm
 
 if filereadable(expand('~/.vim/bundle/vim-colors-solarized/README.mkd'))
-	let g:solarized_degrade=0
-	let g:solarized_bold=1
-	let g:solarized_underline=1
-	let g:solarized_italic=1
-	let g:solarized_termtrans=1
-	let g:solarized_termcolors=16
+    let g:solarized_degrade=0
+    let g:solarized_bold=1
+    let g:solarized_underline=1
+    let g:solarized_italic=1
+    let g:solarized_termtrans=1
+    let g:solarized_termcolors=16
 
-	colorscheme solarized
+    colorscheme solarized
 endif
 
 " Paste Toggle
@@ -37,6 +37,19 @@ let g:go_disable_autoinstall = 1
 " PDV settings
 let g:pdv_template_dir = $HOME ."/.vim/bundle/pdv/templates_snip"
 nnoremap <buffer> <C-p> :call pdv#DocumentWithSnip()<CR>
+
+" VDebug options
+let g:vdebug_options = {
+\    "port" : 9000,
+\    "server" : '0.0.0.0',
+\    "break_on_open" : 1,
+\    "ide_key" : 'xdebug',
+\    "debug_window_level" : 0,
+\    "debug_file_level" : 0,
+\    "debug_file" : "",
+\}
+" Also path_maps can be added above
+"\    "path_maps" : { "remote/path": "local/path" }
 
 " Filetype specific settings
 autocmd BufRead,BufNewFile *.php,*.xml set expandtab
