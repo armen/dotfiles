@@ -15,6 +15,10 @@ if [ ! -d "$HOME/.dotfiles" ]; then
     ln -s "$HOME/.dotfiles/vimrc" "$HOME/.vimrc"
 
     vim +PluginInstall +qall
+
+    git clone git://github.com/ndbroadbent/scm_breeze.git ~/.scm_breeze
+    ~/.scm_breeze/install.sh
+    source ~/.zshrc
 else
     echo ".dotfiles is already installed"
     echo "Upgrading current .dotfiles"
