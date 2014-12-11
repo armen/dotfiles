@@ -33,6 +33,7 @@ autocmd FileType go,php set completeopt=longest,menuone
 
 " If you want golang integration comment out following line
 let g:go_disable_autoinstall = 1
+let g:go_fmt_command = "goimports"
 
 " PDV settings
 let g:pdv_template_dir = $HOME ."/.vim/bundle/pdv/templates_snip"
