@@ -41,6 +41,9 @@ let g:php_cs_fixer_verbose = 0                 " Return the output of command if
 let g:php_cs_fixer_fixers_list = "-lowercase_constants,-concat_without_spaces,-operators_spaces,ordered_use,short_array_syntax"
 autocmd FileType php command! Fmt silent! undojoin | silent! call PhpCsFixerFixFile() | edit!
 
+" JSON Pretty Printer
+autocmd BufRead,BufNewFile *.json command! Fmt execute "%!python -m json.tool"
+
 " If you want golang integration comment out following line
 let g:go_disable_autoinstall = 1
 let g:go_fmt_command = "goimports"
