@@ -31,6 +31,16 @@ let g:SuperTabContextDefaultCompletionType = "<c-x><c-o>"
 " complete options (disable preview scratch window for go)
 autocmd FileType go,php set completeopt=longest,menuone
 
+let g:php_cs_fixer_path = "php-cs-fixer"       " define the path to the php-cs-fixer.phar
+let g:php_cs_fixer_level = "defualt"           " which level ?
+let g:php_cs_fixer_config = "default"          " configuration
+let g:php_cs_fixer_php_path = "php"            " Path to PHP
+let g:php_cs_fixer_enable_default_mapping = 0  " Enable the mapping by default (<leader>pcd)
+let g:php_cs_fixer_dry_run = 0                 " Call command with dry-run option
+let g:php_cs_fixer_verbose = 0                 " Return the output of command if 1, else an inline information.
+let g:php_cs_fixer_fixers_list = "-lowercase_constants,-concat_without_spaces,-operators_spaces,ordered_use,short_array_syntax"
+autocmd FileType php command! Fmt silent! undojoin | silent! call PhpCsFixerFixFile() | edit!
+
 " If you want golang integration comment out following line
 let g:go_disable_autoinstall = 1
 let g:go_fmt_command = "goimports"
