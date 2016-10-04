@@ -18,6 +18,10 @@ if [ ! -d "$HOME/.dotfiles" ]; then
 
     git clone git://github.com/ndbroadbent/scm_breeze.git ~/.scm_breeze
     ~/.scm_breeze/install.sh
+
+	[ -f "$HOME/.zshrc" ] && echo "[ -f \"$HOME/.dotfiles/bin/init-ssh-agent\" ] && source \"$HOME/.dotfiles/bin/init-ssh-agent\"" >> $HOME/.zshrc
+	[ -f "$HOME/.bashrc" ] && echo "[ -f \"$HOME/.dotfiles/bin/init-ssh-agent\" ] && source \"$HOME/.dotfiles/bin/init-ssh-agent\"" >> $HOME/.bashrc
+
     source ~/.zshrc
 else
     echo ".dotfiles is already installed"
