@@ -87,3 +87,13 @@ autocmd BufRead,BufNewFile *.enb set filetype=json
 " There is a bug that UltiSnips throws an error dispite the fact that python 3
 " is available and installed (e.g. `:echo has("python3")` = 1)
 " au VimEnter * au! UltiSnips_AutoTrigger
+"
+
+" Set the filename as the title
+" BufEnter: The title will be updated as soon as the buffer is changed
+"           (e.g. moving to a new split)
+" Other alternatives: BufReadPost,FileReadPost,BufNewFile
+" see https://vim.fandom.com/wiki/Get_the_name_of_the_current_file
+autocmd BufEnter * call system("tmux rename-window " . expand("%:t"))
+" Set the directory and filename as the title
+"autocmd BufReadPost,FileReadPost,BufNewFile * call system("tmux rename-window " . expand("%:r") . "." . expand("%:e"))
