@@ -54,6 +54,7 @@ let g:pdv_template_dir = $HOME ."/.vim/bundle/pdv/templates_snip"
 nnoremap <buffer> <C-p> :call pdv#DocumentWithSnip()<CR>
 
 " VDebug options
+let g:vdebug_features = {'extended_properties': 1} " https://github.com/vim-vdebug/vdebug/issues/369
 let g:vdebug_options = {
 \    "port" : 9000,
 \    "server" : '0.0.0.0',

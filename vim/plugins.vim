@@ -4,7 +4,7 @@ call vundle#begin()
 
 Plugin 'gmarik/Vundle.vim'
 Plugin 'christoomey/vim-tmux-navigator'
-Plugin 'joonty/vdebug.git'
+Plugin 'vim-vdebug/vdebug'
 Plugin 'ervandew/supertab'
 Plugin 'dimasg/vim-mark'
 Plugin 'Conque-GDB'
