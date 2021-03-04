@@ -48,6 +48,9 @@ autocmd BufRead,BufNewFile *.json,*.json.dist,*.enb command! Fmt execute "%!php 
 " If you want golang integration comment out following line
 let g:go_disable_autoinstall = 1
 let g:go_fmt_command = "goimports"
+let g:go_version_warning = 0
+
+let g:pymode_python = 'python3'
 
 " PDV settings
 let g:pdv_template_dir = $HOME ."/.vim/bundle/pdv/templates_snip"
@@ -80,3 +83,7 @@ autocmd BufRead,BufNewFile *.gsl  set filetype=gsl
 autocmd BufRead,BufNewFile *.md   set filetype=markdown
 autocmd BufRead,BufNewFile *.json.dist set filetype=json
 autocmd BufRead,BufNewFile *.enb set filetype=json
+
+" There is a bug that UltiSnips throws an error dispite the fact that python 3
+" is available and installed (e.g. `:echo has("python3")` = 1)
+" au VimEnter * au! UltiSnips_AutoTrigger
