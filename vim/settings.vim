@@ -99,6 +99,7 @@ autocmd BufRead,BufNewFile *.enb set filetype=json
 "           (e.g. moving to a new split)
 " Other alternatives: BufReadPost,FileReadPost,BufNewFile
 " see https://vim.fandom.com/wiki/Get_the_name_of_the_current_file
-autocmd BufEnter * call system("tmux rename-window " . expand("%:t"))
+" Additionally show the number of splits
+autocmd BufEnter * call system("tmux rename-window '" . expand("%:t") . ( tabpagewinnr(v:lnum, '$') > 1 ? " (" . tabpagewinnr(v:lnum, '$') . ")" : "") . "'")
 " Set the directory and filename as the title
 "autocmd BufReadPost,FileReadPost,BufNewFile * call system("tmux rename-window " . expand("%:r") . "." . expand("%:e"))
