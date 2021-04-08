@@ -3,6 +3,11 @@ set t_Co=16
 set t_Sb=^[[4%dm
 set t_Sf=^[[3%dm
 
+set textwidth=120
+set formatoptions-=t
+set formatoptions+=q
+set formatoptions+=c " Auto wrap comments
+
 if filereadable(expand('~/.vim/bundle/vim-colors-solarized/README.mkd'))
     let g:solarized_degrade=0
     let g:solarized_bold=1
