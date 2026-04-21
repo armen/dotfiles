@@ -5,7 +5,7 @@ if [ ! -z "$SSH_TTY" ]; then
 	PROC=`echo $SSH_AUTH_SOCK | sed -e "s/.*agent\.//"`
 
 	# if ssh auth variable is missing
-	if [ -z "$SSH_AUTH_SOCK" -o ! -f "/proc/$PROC/comm" -o `cat "/proc/$PROC/comm" 2>/dev/null` -eq "ssh-agent" ] ; then
+	if [ ! -S "$SSH_AUTH_SOCK" -o ! -f "/proc/$PROC/comm" -o "$(cat "/proc/$PROC/comm" 2>/dev/null)" = "ssh-agent" ] ; then
 		export SSH_AUTH_SOCK="$HOME/.ssh/.auth_socket"
 	fi
 
@@ -20,7 +20,7 @@ if [ ! -z "$SSH_TTY" ]; then
 	fi
 
 	# if agent isn't defined, recreate it from pid file
-	if [ -z $SSH_AGENT_PID ]; then
+	if [ -z "$SSH_AGENT_PID" ]; then
 		export SSH_AGENT_PID=`cat $HOME/.ssh/.auth_pid`
 	fi
 fi
