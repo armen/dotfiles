@@ -17,7 +17,7 @@ Plugin 'honza/vim-snippets' " Required by pdv
 Plugin 'stephpy/vim-php-cs-fixer'
 Plugin 'alvan/vim-phpmanual'
 
-Plugin 'github/copilot.vim'
+"Plugin 'github/copilot.vim'
 
 " gsl.vim provides syntax highlighting for GSL templates; more information
 " " about GSL can be found on iMatix's site, http://www.imatix.com/products.
