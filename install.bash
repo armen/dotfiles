@@ -73,10 +73,9 @@ else
     echo 'ZSH_THEME="armen"' >> "$HOME/.zshrc"
 fi
 
-# Prepend ~/.dotfiles/bin, ~/.local/bin and ~/bin to PATH via ~/.zprofile.
-touch "$HOME/.zprofile"
-if ! grep -qF '# dotfiles: PATH' "$HOME/.zprofile"; then
-    cat >> "$HOME/.zprofile" <<'PROFILE'
+touch "$HOME/.zshenv"
+if ! grep -qF '# dotfiles: PATH' "$HOME/.zshenv"; then
+    cat >> "$HOME/.zshenv" <<'ZSHENV'
 
 # dotfiles: PATH
 for d in "$HOME/bin" "$HOME/.local/bin" "$HOME/.dotfiles/bin"; do
@@ -86,7 +85,7 @@ for d in "$HOME/bin" "$HOME/.local/bin" "$HOME/.dotfiles/bin"; do
     esac
 done
 export PATH
-PROFILE
+ZSHENV
 fi
 
 ## crontab
