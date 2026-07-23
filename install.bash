@@ -42,8 +42,14 @@ else
     echo "Upgrading current .dotfiles"
 
     cd $HOME/.dotfiles
+    # Detect whether git pull updates install.bash itself: this process is running
+    # the OLD copy already loaded into memory, so its changes only apply next run.
+    _ib_before=$(cksum install.bash 2>/dev/null)
     git pull
-
+    if [ "$(cksum install.bash 2>/dev/null)" != "$_ib_before" ]; then
+        echo "[warn] install.bash was updated by 'git pull'. This run is still executing the"
+        echo "[warn] OLD in-memory version - re-run ./install.bash (or setup-env) to apply it."
+    fi
 
     if [ ! -d "$HOME/.dotfiles/vim/bundle/Vundle.vim" ]; then
         git clone https://github.com/gmarik/vundle "$HOME/.dotfiles/vim/bundle/Vundle.vim"
