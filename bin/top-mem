@@ -1,19 +1,76 @@
-ps aux --sort=-%mem | awk 'NR==1; NR>1 {
-  cmd=$11; 
-  gsub(/.*\//, "", cmd); 
-  
-  # Fix /proc/self/exe by checking the command line
-  if (cmd == "exe") {
-    if ($0 ~ /\.config\/Slack/) cmd="slack";
-    else if ($0 ~ /\.config\/Windsurf/) cmd="windsurf";
-  }
-  
-  apps[cmd]+=$4; 
-  rss[cmd]+=$6
-} END {
-  for (app in apps) 
-    printf "%-30s %6.1f%%  %10d MB\n", app, apps[app], rss[app]/1024
-}' | sort -k2 -rn | head -20
+#!/usr/bin/env bash
+
+declare -A container_names
+
+while read -r id name; do
+  container_names["$id"]=$name
+done < <(docker ps --no-trunc --format '{{.ID}} {{.Names}}' 2>/dev/null)
+
+runtime_label() {
+  local pid=$1
+  local runtime=$2
+  local args=$3
+  local cgroup arg label='' cwd
+
+  if [[ -r /proc/"$pid"/cgroup ]]; then
+    cgroup=$(</proc/"$pid"/cgroup)
+    if [[ $cgroup =~ docker[-/]([0-9a-f]{64}) ]]; then
+      label=${container_names[${BASH_REMATCH[1]}]:-}
+      if [[ -n $label ]]; then
+        printf '%s: %s' "$runtime" "$label"
+        return
+      fi
+    fi
+  fi
+
+  if [[ $runtime == java ]]; then
+    if [[ $args =~ (^|[[:space:]])-jar[[:space:]]+([^[:space:]]+) ]]; then
+      label=${BASH_REMATCH[2]##*/}
+    else
+      for arg in $args; do
+        [[ $arg =~ ^[[:alpha:]_$][[:alnum:]_$.]*\.[[:alpha:]_$][[:alnum:]_$]*$ ]] &&
+          label=$arg
+      done
+    fi
+  elif [[ $args =~ (^|[[:space:]])([^[:space:]]+\.(js|cjs|mjs|ts))([[:space:]]|$) ]]; then
+    label=${BASH_REMATCH[2]##*/}
+    cwd=$(readlink /proc/"$pid"/cwd 2>/dev/null)
+    if [[ -n $cwd && $label =~ ^(index|server)\.(js|cjs|mjs|ts)$ ]]; then
+      label=${cwd##*/}/$label
+    fi
+  fi
+
+  printf '%s%s' "$runtime" "${label:+: $label}"
+}
+
+while read -r pid pmem rss args; do
+  executable=${args%% *}
+  command=${executable##*/}
+
+  case $command in
+    exe)
+      case $args in
+        *".config/Slack"*) command=slack ;;
+        *".config/Windsurf"*) command=windsurf ;;
+      esac
+      ;;
+    java | node)
+      command=$(runtime_label "$pid" "$command" "$args")
+      ;;
+  esac
+
+  printf '%s\t%s\t%s\n' "$command" "$pmem" "$rss"
+done < <(ps -eo pid=,pmem=,rss=,args= --sort=-pmem) |
+  awk -F '\t' '{
+    apps[$1] += $2
+    rss[$1] += $3
+  } END {
+    for (app in apps)
+      printf "%.1f\t%s\t%d\n", apps[app], app, rss[app] / 1024
+  }' |
+  sort -t $'\t' -k1,1rn |
+  head -20 |
+  awk -F '\t' '{printf "%-52s %6.1f%%  %10d MB\n", $2, $1, $3}'
 
 echo ""
 free -hm
