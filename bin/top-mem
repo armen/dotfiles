@@ -1,0 +1,19 @@
+ps aux --sort=-%mem | awk 'NR==1; NR>1 {
+  cmd=$11; 
+  gsub(/.*\//, "", cmd); 
+  
+  # Fix /proc/self/exe by checking the command line
+  if (cmd == "exe") {
+    if ($0 ~ /\.config\/Slack/) cmd="slack";
+    else if ($0 ~ /\.config\/Windsurf/) cmd="windsurf";
+  }
+  
+  apps[cmd]+=$4; 
+  rss[cmd]+=$6
+} END {
+  for (app in apps) 
+    printf "%-30s %6.1f%%  %10d MB\n", app, apps[app], rss[app]/1024
+}' | sort -k2 -rn | head -20
+
+echo ""
+free -hm
