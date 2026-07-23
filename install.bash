@@ -43,3 +43,43 @@ fi
 ## Sync with the following
 # curl -s "https://raw.githubusercontent.com/seebi/dircolors-solarized/master/dircolors.ansi-dark" -o dircolors.ansi-dark
 cp "$HOME/.dotfiles/dircolors.ansi-dark" "$HOME/.dircolors.ansi-dark"
+
+## zsh theme + PATH
+
+# Make the "armen" theme discoverable by oh-my-zsh and select it in ~/.zshrc.
+if [ -d "$HOME/.oh-my-zsh" ]; then
+    mkdir -p "$HOME/.oh-my-zsh/custom/themes"
+    ln -sfn "$HOME/.dotfiles/oh-my-zsh/themes/armen.zsh-theme" \
+            "$HOME/.oh-my-zsh/custom/themes/armen.zsh-theme"
+fi
+
+touch "$HOME/.zshrc"
+if grep -q '^ZSH_THEME=' "$HOME/.zshrc"; then
+    sed -i 's/^ZSH_THEME=.*/ZSH_THEME="armen"/' "$HOME/.zshrc"
+else
+    echo 'ZSH_THEME="armen"' >> "$HOME/.zshrc"
+fi
+
+# Prepend ~/.dotfiles/bin, ~/.local/bin and ~/bin to PATH via ~/.zprofile.
+touch "$HOME/.zprofile"
+if ! grep -qF '# dotfiles: PATH' "$HOME/.zprofile"; then
+    cat >> "$HOME/.zprofile" <<'PROFILE'
+
+# dotfiles: PATH
+for d in "$HOME/bin" "$HOME/.local/bin" "$HOME/.dotfiles/bin"; do
+    case ":$PATH:" in
+        *":$d:"*) ;;
+        *) PATH="$d:$PATH" ;;
+    esac
+done
+export PATH
+PROFILE
+fi
+
+## crontab
+
+# Save tmux sessions every 5 minutes.
+if command -v crontab >/dev/null; then
+    CRON_LINE='*/5 * * * * ~/.dotfiles/bin/tmux-session save'
+    ( crontab -l 2>/dev/null | grep -Fv 'tmux-session save'; echo "$CRON_LINE" ) | crontab -
+fi
