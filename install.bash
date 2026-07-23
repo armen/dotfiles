@@ -1,5 +1,18 @@
 #!/bin/bash
 
+# Run vim's plugin commands without corrupting the terminal when stdin is not a
+# TTY (e.g. when this script is piped over SSH). A pseudo-terminal from `script`
+# keeps vim's full-screen redraw off the real terminal.
+vim_headless() {
+    if [ -t 0 ] && [ -t 1 ]; then
+        vim "$@"
+    elif command -v script >/dev/null 2>&1; then
+        script -qec "vim $*" /dev/null
+    else
+        vim "$@" </dev/null >/dev/null 2>&1 || true
+    fi
+}
+
 if [ ! -d "$HOME/.dotfiles" ]; then
     echo "Installing .dotfiles"
 
@@ -15,7 +28,7 @@ if [ ! -d "$HOME/.dotfiles" ]; then
     ln -s "$HOME/.dotfiles/vimrc" "$HOME/.vimrc"
     ln -s "$HOME/.dotfiles/tmux.conf" "$HOME/.tmux.conf"
 
-    vim +PluginInstall +qall
+    vim_headless +PluginInstall +qall
 
     git clone git://github.com/ndbroadbent/scm_breeze.git ~/.scm_breeze
     ~/.scm_breeze/install.sh
@@ -36,7 +49,7 @@ else
         git clone https://github.com/gmarik/vundle "$HOME/.dotfiles/vim/bundle/Vundle.vim"
     fi
 
-    vim +PluginClean +PluginInstall +PluginUpdate +qall
+    vim_headless +PluginClean +PluginInstall +PluginUpdate +qall
     cd -
 fi
 
