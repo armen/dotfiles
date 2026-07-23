@@ -1,15 +1,14 @@
 #!/bin/bash
 
-# Run vim's plugin commands without corrupting the terminal when stdin is not a
-# TTY (e.g. when this script is piped over SSH). A pseudo-terminal from `script`
-# keeps vim's full-screen redraw off the real terminal.
+# Give vim a pseudo-terminal so it doesn't print "Input/Output is not ... a
+# terminal" — those warnings, emitted after vim switches the terminal to raw
+# mode, stair-step all following output when the installer runs non-interactively
+# (e.g. piped over SSH).
 vim_headless() {
     if [ -t 0 ] && [ -t 1 ]; then
         vim "$@"
-    elif command -v script >/dev/null 2>&1; then
-        script -qec "vim $*" /dev/null
     else
-        vim "$@" </dev/null >/dev/null 2>&1 || true
+        script -qec "vim $*" /dev/null
     fi
 }
 
