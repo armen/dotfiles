@@ -3,12 +3,13 @@
 # Give vim a pseudo-terminal so it doesn't print "Input/Output is not ... a
 # terminal" — those warnings, emitted after vim switches the terminal to raw
 # mode, stair-step all following output when the installer runs non-interactively
-# (e.g. piped over SSH).
+# (e.g. piped over SSH). Feeding `script` the real terminal on stdin (<&1) also
+# sizes the pty to the window, so vim isn't stuck at the default 80 columns.
 vim_headless() {
     if [ -t 0 ] && [ -t 1 ]; then
         vim "$@"
     else
-        script -qec "vim $*" /dev/null
+        script -qec "vim $*" /dev/null <&1
     fi
 }
 
