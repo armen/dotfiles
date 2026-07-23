@@ -1,0 +1,123 @@
+#!/usr/bin/env bash
+# Save and restore the state of tmux sessions and windows.
+# TODO: persist and restore the state & position of panes.
+set -e
+
+get_foreground_cmd() {
+  local shell_pid=$1
+  # Get the foreground process group id from the shell's stat (field 8 = tty_pgrp)
+  local fg_pgid=$(awk '{print $8}' /proc/$shell_pid/stat 2>/dev/null)
+  if [[ -n "$fg_pgid" && "$fg_pgid" != "$shell_pid" && -r "/proc/$fg_pgid/cmdline" ]]; then
+    # Foreground process is different from shell - get its cmdline
+    # Use sed to trim trailing whitespace (null bytes become spaces, then get trimmed)
+    cat /proc/$fg_pgid/cmdline 2>/dev/null | tr '\0' ' ' | sed 's/[[:space:]]*$//'
+  fi
+}
+
+dump() {
+  local d=$'\t'
+  tmux list-panes -a -F "#S${d}#W${d}#{pane_current_path}${d}#{pane_pid}" | while IFS=$'\t' read session window dir pid; do
+    fg_cmd=$(get_foreground_cmd "$pid")
+    printf "%s\t%s\t%s\t%s\n" "$session" "$window" "$dir" "$fg_cmd"
+  done
+}
+
+save() {
+  # Don't overwrite backup if tmux server isn't running
+  if ! tmux list-sessions &>/dev/null; then
+    exit 0
+  fi
+  
+  # Keep a dated backup with sequence number before overwriting
+  if [[ -f ~/.tmux-session ]]; then
+    mkdir -p ~/.tmux-session-bk
+    
+    # Generate new dump
+    local new_dump
+    new_dump=$(dump)
+    
+    # Compare with the most recent backup (if it exists)
+    local today=$(date +%Y%m%d)
+    local seq=0
+    local last_backup=""
+    
+    # Find the last backup file and next available sequence number
+    while [[ -f ~/.tmux-session-bk/tmux-session-${today}-${seq} ]]; do
+      last_backup=~/.tmux-session-bk/tmux-session-${today}-${seq}
+      seq=$((seq + 1))
+    done
+    
+    # Only create a backup if content has changed from the last backup
+    if [[ -z "$last_backup" ]] || ! diff -q <(echo "$new_dump") "$last_backup" &>/dev/null; then
+      echo "$new_dump" | tee ~/.tmux-session-bk/tmux-session-${today}-${seq} > ~/.tmux-session
+    else
+      # Content hasn't changed, just update the main file without creating a backup
+      echo "$new_dump" > ~/.tmux-session
+    fi
+  else
+    dump > ~/.tmux-session
+  fi
+}
+
+terminal_size() {
+  stty size 2>/dev/null | awk '{ printf "-x%d -y%d", $2, $1 }'
+}
+
+session_exists() {
+  tmux has-session -t "$1" 2>/dev/null
+}
+
+add_window() {
+  # Use -P -F to get window ID, which works reliably with send-keys
+  # regardless of special characters in session/window names
+  tmux new-window -d -t "$1:" -n "$2" -c "$3" -P -F "#{window_id}"
+}
+
+new_session() {
+  cd "$3" || return 1
+  # Use -P -F to get window ID for reliable targeting
+  tmux new-session -d -s "$1" -n "$2" $4 -P -F "#{window_id}"
+}
+
+restore() {
+  local session_file="${1:-$HOME/.tmux-session}"
+  if [[ ! -f "$session_file" ]]; then
+    echo "Session file not found: $session_file" >&2
+    exit 1
+  fi
+
+  tmux start-server
+  local count=0
+  local dimensions="$(terminal_size)"
+
+  while IFS=$'\t' read session_name window_name dir fg_cmd; do
+    if [[ -d "$dir" && $window_name != "log" && $window_name != "man" ]]; then
+      local target
+      if session_exists "$session_name"; then
+        target=$(add_window "$session_name" "$window_name" "$dir")
+      else
+        target=$(new_session "$session_name" "$window_name" "$dir" "$dimensions")
+        count=$(( count + 1 ))
+      fi
+      # If there was a foreground command, type it (without executing)
+      if [[ -n "$fg_cmd" ]]; then
+        sleep 0.1  # Give the shell a moment to start
+        tmux send-keys -t "$target" "$fg_cmd"
+      fi
+    fi
+  done < "$session_file"
+
+  echo "restored $count sessions from $session_file"
+}
+
+case "$1" in
+save )
+  save
+  ;;
+restore )
+  restore "$2"
+  ;;
+* )
+  echo "valid commands: save, restore [session-file]" >&2
+  exit 1
+esac
