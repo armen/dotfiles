@@ -1,0 +1,5 @@
+#!env sh
+
+ID="pointer:$(xinput list --name-only | sort | grep TrackPoint | head -n 1)"
+
+xinput set-prop "$ID" "libinput Scroll Method Enabled" 0 0 $(($(xinput --list-props "$ID" | grep "libinput Scroll Method Enabled (" | sed "s/.*, //") ^ 1))
