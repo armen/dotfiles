@@ -3,7 +3,7 @@
 if [ ! -d "$HOME/.dotfiles" ]; then
     echo "Installing .dotfiles"
 
-    if [ -d "$HOME/.vim" -o -e "$HOME/.vimrc" ]; then
+    if [ -d "$HOME/.vim" -o -e "$HOME/.vimrc" -o -e "$HOME/.tmux.conf" ]; then
         echo "Already got a .vim/.vimrc, make a backup and remove the original one"
         exit 1
     fi
@@ -13,6 +13,7 @@ if [ ! -d "$HOME/.dotfiles" ]; then
 
     ln -s "$HOME/.dotfiles/vim" "$HOME/.vim"
     ln -s "$HOME/.dotfiles/vimrc" "$HOME/.vimrc"
+    ln -s "$HOME/.dotfiles/tmux.conf" "$HOME/.tmux.conf"
 
     vim +PluginInstall +qall
 
