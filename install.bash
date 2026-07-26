@@ -30,9 +30,6 @@ if [ ! -d "$HOME/.dotfiles" ]; then
 
     vim_headless +PluginInstall +qall
 
-    git clone git://github.com/ndbroadbent/scm_breeze.git ~/.scm_breeze
-    ~/.scm_breeze/install.sh
-
 	[ -f "$HOME/.zshrc" ] && echo "[ -f \"$HOME/.dotfiles/bin/init-ssh-agent\" ] && source \"$HOME/.dotfiles/bin/init-ssh-agent\"" >> $HOME/.zshrc
 	[ -f "$HOME/.bashrc" ] && echo "[ -f \"$HOME/.dotfiles/bin/init-ssh-agent\" ] && source \"$HOME/.dotfiles/bin/init-ssh-agent\"" >> $HOME/.bashrc
 
@@ -62,6 +59,14 @@ fi
 ## Sync with the following
 # curl -s "https://raw.githubusercontent.com/seebi/dircolors-solarized/master/dircolors.ansi-dark" -o dircolors.ansi-dark
 cp "$HOME/.dotfiles/dircolors.ansi-dark" "$HOME/.dircolors.ansi-dark"
+
+## scm_breeze (git shortcuts: gs, gap, ...)
+
+# Self-healing: (re)install if missing. Runs on both fresh install and upgrade.
+if [ ! -d "$HOME/.scm_breeze" ]; then
+    git clone https://github.com/scmbreeze/scm_breeze.git "$HOME/.scm_breeze"
+    "$HOME/.scm_breeze/install.sh"
+fi
 
 ## zsh theme + PATH
 
