@@ -33,7 +33,7 @@ if [ ! -d "$HOME/.dotfiles" ]; then
 	[ -f "$HOME/.zshrc" ] && echo "[ -f \"$HOME/.dotfiles/bin/init-ssh-agent\" ] && source \"$HOME/.dotfiles/bin/init-ssh-agent\"" >> $HOME/.zshrc
 	[ -f "$HOME/.bashrc" ] && echo "[ -f \"$HOME/.dotfiles/bin/init-ssh-agent\" ] && source \"$HOME/.dotfiles/bin/init-ssh-agent\"" >> $HOME/.bashrc
 
-    source ~/.zshrc
+    [ -n "${ZSH_VERSION:-}" ] && source ~/.zshrc
 else
     echo ".dotfiles is already installed"
     echo "Upgrading current .dotfiles"
