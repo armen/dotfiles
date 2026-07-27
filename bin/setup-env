@@ -208,6 +208,8 @@ default='$PROFILE_UUID'
 [org/gnome/terminal/legacy/profiles:/:$PROFILE_UUID]
 visible-name='armen'
 use-theme-colors=false
+use-system-font=false
+font='Monospace 11'
 foreground-color='rgb(131,148,150)'
 background-color='rgb(0,43,54)'
 scrollbar-policy='never'
