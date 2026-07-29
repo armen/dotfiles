@@ -97,7 +97,7 @@ install_packages() {
     sudo apt-get update -qq
     sudo apt-get install -y -qq \
         git tig curl ca-certificates \
-        zsh vim tmux cron xinput \
+        zsh vim tmux cron xinput parallel pv \
         iw wireless-regdb \
         uuid-runtime dconf-cli libglib2.0-bin \
         gnome-terminal gnome-tweaks gnome-shell-extensions
