@@ -29,6 +29,7 @@ main() {
     preflight          # verify assumptions, acquire sudo, find the D-Bus session
     set_regdomain      # WiFi country (offline-safe; unblocks 5 GHz so apt can reach the net)
     install_packages   # apt: zsh, vim, tmux, gnome-tweaks, ...
+    install_glow       # glow markdown renderer (Charm apt repo)
     set_login_shell    # make zsh the login shell (best-effort)
     install_ohmyzsh    # oh-my-zsh
     install_dotfiles   # armen/dotfiles -> vim, tmux, zsh theme, PATH, crontab
@@ -100,6 +101,26 @@ install_packages() {
         iw wireless-regdb \
         uuid-runtime dconf-cli libglib2.0-bin \
         gnome-terminal gnome-tweaks gnome-shell-extensions
+}
+
+install_glow() {
+    say "Installing glow"
+    command -v glow >/dev/null && { echo "glow already installed"; return 0; }
+    # Install it directly, if found.
+    if apt-cache policy glow 2>/dev/null | grep -q 'Candidate: [^(]'; then
+        sudo apt-get install -y -qq glow || warn "glow install failed; skipping."
+        return 0
+    fi
+    # no distro package: pull glow from Charm's own apt repo.
+    local key=/etc/apt/keyrings/charm.gpg list=/etc/apt/sources.list.d/charm.list
+    if [ ! -f "$list" ]; then
+        sudo mkdir -p /etc/apt/keyrings
+        curl -fsSL https://repo.charm.sh/apt/gpg.key | sudo gpg --dearmor -o "$key" \
+            || { warn "Could not fetch Charm apt key; skipping glow."; return 0; }
+        echo "deb [signed-by=$key] https://repo.charm.sh/apt/ * *" | sudo tee "$list" >/dev/null
+    fi
+    sudo apt-get update -qq
+    sudo apt-get install -y -qq glow || warn "glow install failed; skipping."
 }
 
 set_login_shell() {
