@@ -211,8 +211,8 @@ xkb-options=['caps:ctrl_modifier']
 activate-window-menu=@as []
 minimize=@as []
 
-[org/freedesktop/ibus/panel/emoji]
-# disable the Super+. emoji picker
+[desktop/ibus/panel/emoji]
+# disable the Super+. emoji picker cause conflicting with PaperWM
 hotkey=@as []
 
 [org/gnome/desktop/session]
