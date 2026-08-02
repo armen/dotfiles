@@ -36,9 +36,13 @@ main() {
     configure_git      # global git configs
     install_paperwm    # PaperWM GNOME extension (files)
 
-    # GNOME settings - preflight guaranteed the session bus is present.
-    enable_paperwm     # turn the extension on for next login (merges the ext list)
-    gnome_settings     # terminal profile, shortcuts, keyboard, privacy (one dconf load)
+
+    if [ ! -z "${DBUS_SESSION_BUS_ADDRESS:-}" ]; then
+        install_gnome_packages
+        # GNOME settings - preflight guaranteed the session bus is present.
+        enable_paperwm     # turn the extension on for next login (merges the ext list)
+        gnome_settings     # terminal profile, shortcuts, keyboard, privacy (one dconf load)
+    fi
 
     say "Done. Log out and back in for the shell, PaperWM and shortcuts to take effect."
 }
@@ -74,8 +78,7 @@ preflight() {
         export DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$(id -u)/bus"
     fi
     if [ -z "${DBUS_SESSION_BUS_ADDRESS:-}" ]; then
-        echo "No D-Bus session bus - cannot apply GNOME settings. Re-run once logged in (or over SSH, which provides a user bus)." >&2
-        exit 1
+        warn "No D-Bus session bus - cannot apply GNOME settings. Re-run once logged in (or over SSH, which provides a user bus)."
     fi
 }
 
@@ -99,8 +102,7 @@ install_packages() {
         git tig curl ca-certificates \
         zsh vim tmux cron xinput parallel pv \
         iw wireless-regdb \
-        uuid-runtime dconf-cli libglib2.0-bin \
-        gnome-terminal gnome-tweaks gnome-shell-extensions
+        uuid-runtime dconf-cli libglib2.0-bin
 }
 
 install_glow() {
@@ -183,7 +185,15 @@ install_paperwm() {
     [ -d "$dir/schemas" ] && glib-compile-schemas "$dir/schemas"
 }
 
-##### GNOME settings (each writes gsettings/dconf; need the session bus) #####
+##### GNOME settings and packages (each writes gsettings/dconf; need the session bus) #####
+
+install_gnome_packages() {
+    say "Installing GNOME packages"
+    export DEBIAN_FRONTEND=noninteractive
+    sudo apt-get update -qq
+    sudo apt-get install -y -qq \
+        gnome-terminal gnome-tweaks gnome-shell-extensions
+}
 
 enable_paperwm() {
     [ "${PAPERWM_OK:-1}" = 1 ] || return 0
