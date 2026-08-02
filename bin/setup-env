@@ -102,7 +102,8 @@ install_packages() {
         git tig curl ca-certificates \
         zsh vim tmux cron xinput parallel pv \
         iw wireless-regdb \
-        uuid-runtime dconf-cli libglib2.0-bin
+        uuid-runtime dconf-cli libglib2.0-bin \
+        vim-nox
 }
 
 install_glow() {
