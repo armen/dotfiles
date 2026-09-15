@@ -2,8 +2,9 @@
 # Save and restore the state of tmux sessions, windows and panes.
 #
 # Usage: tmux-session save | restore [file] | rename [name]
-#   save             write ~/.tmux-session, and a dated copy in ~/.tmux-session-bk
-#                    when the state changed. Cron runs this every 5 minutes.
+#   save             write ~/.tmux-session, and a copy in ~/.tmux-session-bk when
+#                    the state changed. Cron runs this every 5 minutes, so it keeps
+#                    the last 20 copies and the newest of each of the last 14 days.
 #   restore [file]   rebuild the sessions from the file, or from ~/.tmux-session
 #   rename [name]    name the pane you are in; no name clears it
 #
@@ -22,6 +23,8 @@ set -e
 SESSION_FILE="$HOME/.tmux-session"
 BACKUP_DIR="$HOME/.tmux-session-bk"
 NAME_OPTION="@pane_name"
+KEEP_RECENT=20
+KEEP_DAYS=14
 
 usage() {
   awk 'NR > 1 && /^#/ { sub(/^# ?/, ""); print; next } NR > 1 { exit }' "$0"
@@ -68,36 +71,50 @@ dump() {
     done
 }
 
+# Every backup, newest first. The name carries the time, so the sort is the order.
+backups() {
+  ls -1 "$BACKUP_DIR"/tmux-session-* 2>/dev/null | sort -r
+}
+
+# The last few copies undo an hour of work, and one copy of a day answers what a
+# window held last week. The rest go, or a busy week leaves thousands of files.
+prune_backups() {
+  local file day last_day="" seen=0 days=0
+  while read -r file; do
+    seen=$((seen + 1))
+    day=${file##*/tmux-session-}
+    day=${day%%-*}
+    if [[ "$day" != "$last_day" ]]; then
+      last_day="$day"
+      days=$((days + 1))
+      [[ $days -gt $KEEP_DAYS ]] || continue
+    fi
+    [[ $seen -gt $KEEP_RECENT ]] || continue
+    rm -f "$file"
+  done < <(backups)
+}
+
 save() {
   # A server that does not run holds no state, and would empty the file.
   if ! tmux list-sessions &>/dev/null; then
     exit 0
   fi
 
+  local new_dump last
+  new_dump=$(dump)
+
+  # No file yet is the first run, which has nothing to keep a copy of.
   if [[ -f "$SESSION_FILE" ]]; then
     mkdir -p "$BACKUP_DIR"
-
-    local new_dump
-    new_dump=$(dump)
-
-    local today=$(date +%Y%m%d)
-    local seq=0
-    local last_backup=""
-
-    while [[ -f "$BACKUP_DIR/tmux-session-${today}-${seq}" ]]; do
-      last_backup="$BACKUP_DIR/tmux-session-${today}-${seq}"
-      seq=$((seq + 1))
-    done
-
+    last=$(backups | head -1)
     # A backup only when the state moved, because cron runs this every 5 minutes.
-    if [[ -z "$last_backup" ]] || ! diff -q <(echo "$new_dump") "$last_backup" &>/dev/null; then
-      echo "$new_dump" | tee "$BACKUP_DIR/tmux-session-${today}-${seq}" > "$SESSION_FILE"
-    else
-      echo "$new_dump" > "$SESSION_FILE"
+    if [[ -z "$last" ]] || ! diff -q <(printf '%s\n' "$new_dump") "$last" &>/dev/null; then
+      printf '%s\n' "$new_dump" > "$BACKUP_DIR/tmux-session-$(date +%Y%m%d-%H%M%S)"
+      prune_backups
     fi
-  else
-    dump > "$SESSION_FILE"
   fi
+
+  printf '%s\n' "$new_dump" > "$SESSION_FILE"
 }
 
 terminal_size() {
