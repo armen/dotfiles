@@ -1,61 +1,102 @@
 #!/usr/bin/env bash
-# Save and restore the state of tmux sessions and windows.
-# TODO: persist and restore the state & position of panes.
+# Save and restore the state of tmux sessions, windows and panes.
+#
+# Usage: tmux-session save | restore [file] | rename [name]
+#   save             write ~/.tmux-session, and a dated copy in ~/.tmux-session-bk
+#                    when the state changed. Cron runs this every 5 minutes.
+#   restore [file]   rebuild the sessions from the file, or from ~/.tmux-session
+#   rename [name]    name the pane you are in; no name clears it
+#
+# A restore gives back the windows, the panes in the layout they had, the directory
+# of each pane, and the command that ran in it, typed but not executed.
+#
+# The name of a pane lives in the @pane_name option and not in the title, because a
+# program in the pane owns the title. prefix K asks for one, the border shows it.
+#
+# The name of a window comes back only when prefix k gave it one, because that also
+# turns allow-rename off and the file keeps the setting, so a restore locks the
+# window before its shell renames it. A window you never named follows its command.
+
 set -e
+
+SESSION_FILE="$HOME/.tmux-session"
+BACKUP_DIR="$HOME/.tmux-session-bk"
+NAME_OPTION="@pane_name"
+
+usage() {
+  awk 'NR > 1 && /^#/ { sub(/^# ?/, ""); print; next } NR > 1 { exit }' "$0"
+}
+
+# Split on tabs into F, empty fields kept. `IFS=$'\t' read` folds a run of tabs into
+# one, so a pane with no name would take the directory of the next one.
+split_tabs() {
+  local line="$1"
+  F=()
+  while [[ "$line" == *$'\t'* ]]; do
+    F+=("${line%%$'\t'*}")
+    line="${line#*$'\t'}"
+  done
+  F+=("$line")
+}
 
 get_foreground_cmd() {
   local shell_pid=$1
-  # Get the foreground process group id from the shell's stat (field 8 = tty_pgrp)
+  # Field 8 of stat is tty_pgrp, the foreground process group of the shell.
   local fg_pgid=$(awk '{print $8}' /proc/$shell_pid/stat 2>/dev/null)
   if [[ -n "$fg_pgid" && "$fg_pgid" != "$shell_pid" && -r "/proc/$fg_pgid/cmdline" ]]; then
-    # Foreground process is different from shell - get its cmdline
-    # Use sed to trim trailing whitespace (null bytes become spaces, then get trimmed)
+    # The null bytes of cmdline become the spaces, and sed takes the last one off.
     cat /proc/$fg_pgid/cmdline 2>/dev/null | tr '\0' ' ' | sed 's/[[:space:]]*$//'
   fi
 }
 
+# A W line starts a window, the P lines after it are its panes in layout order. The
+# pane title stays out: a program rewrites it, and every rewrite costs a backup.
 dump() {
-  local d=$'\t'
-  tmux list-panes -a -F "#S${d}#W${d}#{pane_current_path}${d}#{pane_pid}" | while IFS=$'\t' read session window dir pid; do
-    fg_cmd=$(get_foreground_cmd "$pid")
-    printf "%s\t%s\t%s\t%s\n" "$session" "$window" "$dir" "$fg_cmd"
-  done
+  local d=$'\t' last="" line fg
+  printf '# tmux-session v2\n'
+  printf '# W\tsession\twindow\tautomatic-rename\tactive\tlayout\tallow-rename\n'
+  printf '# P\tindex\tactive\tdirectory\tname\tforeground command\n'
+  tmux list-panes -a -F "#{window_id}${d}#S${d}#W${d}#{automatic-rename}${d}#{?window_active,1,0}${d}#{window_layout}${d}#{pane_index}${d}#{?pane_active,1,0}${d}#{pane_current_path}${d}#{${NAME_OPTION}}${d}#{pane_pid}${d}#{allow-rename}" |
+    while IFS= read -r line; do
+      split_tabs "$line"
+      if [[ "${F[0]}" != "$last" ]]; then
+        printf 'W\t%s\t%s\t%s\t%s\t%s\t%s\n' "${F[1]}" "${F[2]}" "${F[3]}" "${F[4]}" "${F[5]}" "${F[11]}"
+        last="${F[0]}"
+      fi
+      fg=$(get_foreground_cmd "${F[10]}")
+      printf 'P\t%s\t%s\t%s\t%s\t%s\n' "${F[6]}" "${F[7]}" "${F[8]}" "${F[9]}" "$fg"
+    done
 }
 
 save() {
-  # Don't overwrite backup if tmux server isn't running
+  # A server that does not run holds no state, and would empty the file.
   if ! tmux list-sessions &>/dev/null; then
     exit 0
   fi
-  
-  # Keep a dated backup with sequence number before overwriting
-  if [[ -f ~/.tmux-session ]]; then
-    mkdir -p ~/.tmux-session-bk
-    
-    # Generate new dump
+
+  if [[ -f "$SESSION_FILE" ]]; then
+    mkdir -p "$BACKUP_DIR"
+
     local new_dump
     new_dump=$(dump)
-    
-    # Compare with the most recent backup (if it exists)
+
     local today=$(date +%Y%m%d)
     local seq=0
     local last_backup=""
-    
-    # Find the last backup file and next available sequence number
-    while [[ -f ~/.tmux-session-bk/tmux-session-${today}-${seq} ]]; do
-      last_backup=~/.tmux-session-bk/tmux-session-${today}-${seq}
+
+    while [[ -f "$BACKUP_DIR/tmux-session-${today}-${seq}" ]]; do
+      last_backup="$BACKUP_DIR/tmux-session-${today}-${seq}"
       seq=$((seq + 1))
     done
-    
-    # Only create a backup if content has changed from the last backup
+
+    # A backup only when the state moved, because cron runs this every 5 minutes.
     if [[ -z "$last_backup" ]] || ! diff -q <(echo "$new_dump") "$last_backup" &>/dev/null; then
-      echo "$new_dump" | tee ~/.tmux-session-bk/tmux-session-${today}-${seq} > ~/.tmux-session
+      echo "$new_dump" | tee "$BACKUP_DIR/tmux-session-${today}-${seq}" > "$SESSION_FILE"
     else
-      # Content hasn't changed, just update the main file without creating a backup
-      echo "$new_dump" > ~/.tmux-session
+      echo "$new_dump" > "$SESSION_FILE"
     fi
   else
-    dump > ~/.tmux-session
+    dump > "$SESSION_FILE"
   fi
 }
 
@@ -67,57 +108,179 @@ session_exists() {
   tmux has-session -t "$1" 2>/dev/null
 }
 
-add_window() {
-  # Use -P -F to get window ID, which works reliably with send-keys
-  # regardless of special characters in session/window names
-  tmux new-window -d -t "$1:" -n "$2" -c "$3" -P -F "#{window_id}"
+# Globals, because the read loop of restore_panes must not run in a subshell.
+R_SESSION="" R_WINDOW="" R_AUTO="" R_WACTIVE="" R_LAYOUT="" R_WID="" R_ALLOW=""
+R_ACTIVE="" R_SKIP=0 R_SESSIONS=0 R_DIMS=""
+R_PANES=() R_NAMES=()
+
+add_pane() {
+  local idx="$1" active="$2" dir="$3" name="$4" cmd="$5" pane last
+  # The layout expects every pane, so a directory that went away must not drop one.
+  if [[ ! -d "$dir" ]]; then dir="$HOME"; fi
+
+  if [[ -z "$R_WID" ]]; then
+    if session_exists "$R_SESSION"; then
+      R_WID=$(tmux new-window -d -t "$R_SESSION:" -n "$R_WINDOW" -c "$dir" -P -F '#{window_id}')
+    else
+      R_WID=$(tmux new-session -d -s "$R_SESSION" -n "$R_WINDOW" -c "$dir" $R_DIMS -P -F '#{window_id}')
+      R_SESSIONS=$((R_SESSIONS + 1))
+    fi
+    # Before the first prompt, which sends the escape that renames the window.
+    if [[ "$R_ALLOW" == 0 ]]; then
+      tmux set -w -t "$R_WID" allow-rename off
+      tmux set -w -t "$R_WID" automatic-rename off
+    fi
+    pane=$(tmux display -p -t "$R_WID" '#{pane_id}')
+  else
+    # select-layout fills its cells in pane order, so a split of the highest index
+    # keeps the panes in the order the file has them.
+    last=$(tmux list-panes -t "$R_WID" -F '#{pane_index} #{pane_id}' | sort -n | tail -1 | cut -d' ' -f2)
+    pane=$(tmux split-window -d -t "$last" -c "$dir" -P -F '#{pane_id}' 2>/dev/null) || pane=""
+    if [[ -z "$pane" ]]; then
+      # A deep layout runs out of room in a window the size of this terminal. Tiled
+      # makes room, and close_window puts the saved layout back.
+      tmux select-layout -t "$R_WID" tiled > /dev/null 2>&1 || true
+      pane=$(tmux split-window -d -t "$last" -c "$dir" -P -F '#{pane_id}' 2>/dev/null) || pane=""
+    fi
+    if [[ -z "$pane" ]]; then
+      printf 'no room for pane %s of %s:%s\n' "$idx" "$R_SESSION" "$R_WINDOW" >&2
+      return 0
+    fi
+  fi
+
+  R_PANES+=("$pane")
+  R_NAMES+=("$name")
+  if [[ "$active" == 1 ]]; then R_ACTIVE="$pane"; fi
+  if [[ -n "$cmd" ]]; then
+    sleep 0.1  # Give the shell a moment to start
+    tmux send-keys -t "$pane" "$cmd"
+  fi
 }
 
-new_session() {
-  cd "$3" || return 1
-  # Use -P -F to get window ID for reliable targeting
-  tmux new-session -d -s "$1" -n "$2" $4 -P -F "#{window_id}"
+close_window() {
+  local i
+  if [[ -z "$R_WID" ]]; then return 0; fi
+
+  if [[ -n "$R_LAYOUT" ]]; then
+    tmux select-layout -t "$R_WID" "$R_LAYOUT" > /dev/null 2>&1 ||
+      tmux select-layout -t "$R_WID" tiled > /dev/null 2>&1 || true
+  fi
+
+  for i in "${!R_PANES[@]}"; do
+    if [[ -n "${R_NAMES[$i]}" ]]; then
+      tmux set -p -t "${R_PANES[$i]}" "$NAME_OPTION" "${R_NAMES[$i]}"
+    fi
+  done
+
+  # The names went on after the last split, so the hook that gives the window its
+  # border line has to run once more. tmux.conf holds that rule.
+  tmux set-hook -R -t "$R_WID" after-split-window 2>/dev/null || true
+
+  if [[ -n "$R_ACTIVE" ]]; then tmux select-pane -t "$R_ACTIVE"; fi
+  # new-window -n turned automatic-rename off, so a window that followed its command
+  # gets that back.
+  if [[ "$R_AUTO" == 1 ]]; then tmux set -w -t "$R_WID" automatic-rename on; fi
+  if [[ "$R_WACTIVE" == 1 ]]; then tmux select-window -t "$R_WID"; fi
+
+  R_WID=""
+}
+
+restore_panes() {
+  local file="$1" line
+  R_DIMS=$(terminal_size)
+  R_SESSIONS=0
+  R_WID=""
+
+  while IFS= read -r line; do
+    split_tabs "$line"
+    case "${F[0]}" in
+      W)
+        close_window
+        R_SESSION="${F[1]}"; R_WINDOW="${F[2]}"; R_AUTO="${F[3]}"
+        R_WACTIVE="${F[4]}"; R_LAYOUT="${F[5]}"; R_ALLOW="${F[6]:-}"
+        R_WID=""; R_PANES=(); R_NAMES=(); R_ACTIVE=""
+        # A log and a man page hold nothing worth coming back to.
+        if [[ "$R_WINDOW" == log || "$R_WINDOW" == man ]]; then R_SKIP=1; else R_SKIP=0; fi
+        ;;
+      P)
+        if [[ $R_SKIP -eq 0 ]]; then
+          add_pane "${F[1]}" "${F[2]}" "${F[3]}" "${F[4]}" "${F[5]}"
+        fi
+        ;;
+    esac
+  done < "$file"
+  close_window
+
+  printf 'restored %s sessions from %s\n' "$R_SESSIONS" "$file"
+}
+
+# The copies from before this format carry four fields and no W line, and each of
+# their lines reads as one window.
+restore_legacy() {
+  local file="$1" line session window dir cmd target count=0 dims
+  dims=$(terminal_size)
+  while IFS= read -r line; do
+    split_tabs "$line"
+    session="${F[0]}"; window="${F[1]}"; dir="${F[2]}"; cmd="${F[3]:-}"
+    if [[ -d "$dir" && "$window" != log && "$window" != man ]]; then
+      if session_exists "$session"; then
+        target=$(tmux new-window -d -t "$session:" -n "$window" -c "$dir" -P -F '#{window_id}')
+      else
+        target=$(tmux new-session -d -s "$session" -n "$window" -c "$dir" $dims -P -F '#{window_id}')
+        count=$((count + 1))
+      fi
+      if [[ -n "$cmd" ]]; then
+        sleep 0.1
+        tmux send-keys -t "$target" "$cmd"
+      fi
+    fi
+  done < "$file"
+  printf 'restored %s sessions from %s, which holds no pane\n' "$count" "$file"
 }
 
 restore() {
-  local session_file="${1:-$HOME/.tmux-session}"
-  if [[ ! -f "$session_file" ]]; then
-    echo "Session file not found: $session_file" >&2
+  local file="${1:-$SESSION_FILE}"
+  if [[ ! -f "$file" ]]; then
+    echo "Session file not found: $file" >&2
     exit 1
   fi
 
   tmux start-server
-  local count=0
-  local dimensions="$(terminal_size)"
-
-  while IFS=$'\t' read session_name window_name dir fg_cmd; do
-    if [[ -d "$dir" && $window_name != "log" && $window_name != "man" ]]; then
-      local target
-      if session_exists "$session_name"; then
-        target=$(add_window "$session_name" "$window_name" "$dir")
-      else
-        target=$(new_session "$session_name" "$window_name" "$dir" "$dimensions")
-        count=$(( count + 1 ))
-      fi
-      # If there was a foreground command, type it (without executing)
-      if [[ -n "$fg_cmd" ]]; then
-        sleep 0.1  # Give the shell a moment to start
-        tmux send-keys -t "$target" "$fg_cmd"
-      fi
-    fi
-  done < "$session_file"
-
-  echo "restored $count sessions from $session_file"
+  if grep -q "^W$(printf '\t')" "$file"; then
+    restore_panes "$file"
+  else
+    restore_legacy "$file"
+  fi
 }
 
-case "$1" in
+rename() {
+  local name="$1" pane
+  pane=$(tmux display -p '#{pane_id}')
+  # A tab or a newline would split the line that save writes.
+  name=$(printf '%s' "$name" | tr -d '\t\n')
+
+  if [[ -z "$name" ]]; then
+    tmux set -pu -t "$pane" "$NAME_OPTION" 2>/dev/null || true
+  else
+    tmux set -p -t "$pane" "$NAME_OPTION" "$name"
+  fi
+  tmux set-hook -R -t "$pane" after-split-window 2>/dev/null || true
+}
+
+case "${1:-}" in
 save )
   save
   ;;
 restore )
-  restore "$2"
+  restore "${2:-}"
+  ;;
+rename )
+  rename "${2:-}"
+  ;;
+-h | --help )
+  usage
   ;;
 * )
-  echo "valid commands: save, restore [session-file]" >&2
+  echo "valid commands: save, restore [session-file], rename [name]" >&2
   exit 1
 esac
