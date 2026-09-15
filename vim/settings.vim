@@ -94,7 +94,26 @@ autocmd BufRead,BufNewFile *.js,*.ts set tabstop=2 shiftwidth=2 expandtab
 " Other alternatives: BufReadPost,FileReadPost,BufNewFile
 " see https://vim.fandom.com/wiki/Get_the_name_of_the_current_file
 " Additionally show the number of splits
-autocmd BufEnter * call system("tmux rename-window -t $(tmux display-message -p -t \"\${TMUX_PANE}\" \"\#{window_index}\") '" . expand("%:t") . ( tabpagewinnr(v:lnum, '$') > 1 ? " (" . tabpagewinnr(v:lnum, '$') . ")" : "") . "'")
+" prefix k turns allow-rename off, and rename-window is a command that the option
+" does not gate, so the check belongs here. Target the pane id: an index moves.
+function! s:TmuxWindowTitle() abort
+  if empty($TMUX) || empty($TMUX_PANE)
+    return
+  endif
+  if system('tmux display-message -p -t ' . shellescape($TMUX_PANE) . ' "#{allow-rename}"') =~# '^0'
+    return
+  endif
+  let l:name = expand("%:t")
+  if empty(l:name)
+    return
+  endif
+  let l:splits = tabpagewinnr(v:lnum, '$')
+  if l:splits > 1
+    let l:name .= " (" . l:splits . ")"
+  endif
+  call system('tmux rename-window -t ' . shellescape($TMUX_PANE) . ' ' . shellescape(l:name))
+endfunction
+autocmd BufEnter * call s:TmuxWindowTitle()
 "
 " Old version which had a bug when renaming the window title of active window instead if the window which executing the
 " command
