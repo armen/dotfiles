@@ -17,6 +17,9 @@ Plugin 'honza/vim-snippets' " Required by pdv
 Plugin 'stephpy/vim-php-cs-fixer'
 Plugin 'alvan/vim-phpmanual'
 
+" file:line, file:line:col, and file(line,col) formats from the terminal and inside Vim (:e, gf).
+Plugin 'wsdjeg/vim-fetch'
+
 "Plugin 'github/copilot.vim'
 
 " gsl.vim provides syntax highlighting for GSL templates; more information
